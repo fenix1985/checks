@@ -1,0 +1,37 @@
+version: "3.3"
+services:
+
+  db:
+    image: postgres:12
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/pgdata
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - ${POSTGRES_PORT?Variable not set}:5432
+
+
+  backend:
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    env_file:
+      - .env
+    build:
+      context: . # current local directory of the project
+      dockerfile: ./docker_files/backend.dockerfile
+      args:
+        DEPLOYMENT_ENV: ${DEPLOYMENT_ENV-development}
+    environment:
+      - INITIALIZE_ALEMBIC
+      - DEPLOYMENT_ENV
+    ports:
+      - ${BACKEND_PORT?Variable not set}:80
+    volumes:
+      - .:/app
+    command: /start-reload.sh
+    depends_on:
+      - db
+
+volumes:
+  app-db-data: # to save data between containers and their relaunching

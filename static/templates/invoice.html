@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice</title>
+    <style>
+        .container {
+            width: 40%;
+            margin: 0 auto; /* центруємо контейнер по горизонталі */
+        }
+
+        .product-container {
+            display: flex;
+            flex-direction: column; /* Розташовуємо елементи в колонку */
+            align-items: flex-start; /* Вирівнюємо елементи по лівому краю */
+        }
+
+        .row {
+            display: flex; /* Розташовуємо елементи в рядок */
+            justify-content: space-between; /* Рівномірно розподіляємо простір між ними */
+            width: 100%; /* Розтягуємо рядок на всю ширину контейнера */
+        }
+
+        .left-element {
+            margin-right: auto; /* Переміщуємо елемент вправо */
+        }
+
+        .right-element {
+            margin-left: auto; /* Переміщуємо елемент вліво */
+        }
+
+        .single-element {
+            width: 100%; /* Розтягуємо елемент на всю ширину контейнера */
+        }
+
+        .center-element {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="center-element">
+        <h1>Чек</h1>
+        <p>ФОП: {{check_data.customer_name}} </p>
+    </div>
+    <hr>
+    {% for product in check_data.products %}
+    <div class="product-container">
+        <div class="single-element"><span> {{ product.quantity }} x {{ product.price}} </span></div>
+        <div class="row">
+            <span class="left-element">{{ product.name }}</span>
+            <span class="right-element">{{ product.quantity * product.price}}</span>
+        </div>
+    </div>
+    <hr>
+    {% endfor %}
+    <div class="row">
+        <span class="left-element">СУМА: </span>
+        <span class="right-element">{{ check_data.total}}</span>
+    </div>
+
+    <div class="row">
+        <span class="left-element">{{payment_map[check_data.payment.type]}}: </span>
+        <span class="right-element">{{ check_data.payment.amount}}</span>
+    </div>
+
+    <div class="row">
+        <span class="left-element">Решта </span>
+        <span class="right-element">{{check_data.rest}}</span>
+    </div>
+    <hr>
+    <div class="center-element">
+        <p>{{ check_data.created_at}}</p>
+        <p>Дякуємо за покупку!</p>
+    </div>
+</div>
+</body>
+</html>
