@@ -3,6 +3,7 @@ from typing import Any, Union, Optional
 
 from fastapi import APIRouter, Depends
 from fastapi_pagination import Page, paginate
+from pydantic import ValidationError
 from starlette import status
 from fastapi.requests import Request
 from starlette.responses import HTMLResponse
@@ -10,6 +11,7 @@ from starlette.templating import Jinja2Templates
 
 from api.user_auth_bearer.deps import token_access
 from core.enums import PaymentType
+from core.validation_messages import NOT_ENOUGH_MONEY
 from db_cruds.check import DBCheckOps
 from deps import get_check_crud
 from models.all_models import User, ProductCheck, Check
@@ -39,35 +41,41 @@ async def create_check(
     Create a check using the given payload.
     """
     prepared_data = await check_ops.convert_schema_to_dict(check_order)
+
+    products_in_check = prepared_data.pop("products")
+    total_products_cost = 0
+
+    products_instances = []
+    for product in products_in_check:
+        products_instances.append(ProductCheck(**product))
+        total_products_cost += product["price"]*product["quantity"]
+
+    if prepared_data["payment"]["amount"] < total_products_cost:
+        raise ValidationError(NOT_ENOUGH_MONEY)
+
     check_unique_token = random_token()
     prepared_data["payment"]["token"] = check_unique_token
     prepared_data["payment"]["customer_id"] = current_user.user_id
     prepared_data["payment"]["url"] = str(request.url_for("public_check", token=check_unique_token))
 
-    products_in_check = prepared_data.pop("products")
+    check = Check(**prepared_data["payment"])
+    check.details.extend(products_instances)
+    check = await check_ops.create_check(check)
 
-    if products_in_check:
+    payment_info = Payment.model_validate(check)
+    product_info = [Product.model_validate(e) for e in check.details]
 
-        check = Check(**prepared_data["payment"])
-        total_cost_for_products = 0
-
-        for product in products_in_check:
-            check.details.append(ProductCheck(**product))
-            total_cost_for_products += product["price"]*product["quantity"]
-
-        check = await check_ops.create_check(check)
-
-        payment_info = Payment.model_validate(check)
-        product_info = [Product.model_validate(e) for e in check.details]
-
-        return CheckOut(
-            payment=payment_info, products=product_info,
-            check_id=check.check_id,
-            created_at=check.created_at,
-            token=check.token, url=check.url,
-            total=total_cost_for_products,
-            rest=prepared_data["payment"]["amount"]-total_cost_for_products
-        )
+    return CheckOut(
+        payment=payment_info,
+        products=product_info,
+        check_id=check.check_id,
+        created_at=check.created_at,
+        token=check.token,
+        url=check.url,
+        total=total_products_cost,
+        rest=prepared_data["payment"]["amount"]-total_products_cost,
+        customer_name=f"{current_user.first_name} {current_user.last_name}"
+    )
 
 
 @router.get(

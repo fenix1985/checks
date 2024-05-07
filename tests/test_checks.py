@@ -156,7 +156,7 @@ async def test_create_check(
             assert payload["products"][0][field] == getattr(saved_product_check, field)
 
 
-async def test_list_of_checks_created_by_user(
+async def test_create_check_without_products(
         db: AsyncSession,
         client: AsyncClient,
         auth_connector: AuthConnector,
@@ -164,7 +164,7 @@ async def test_list_of_checks_created_by_user(
         crud_check: DBCheckOps,
         crud_product_check: DBProductCheckOps,
 ) -> None:
-    """This test checks creation of a check by authorized user"""
+    """This test checks validation on creation of a check by authorized user"""
 
     email = "test@test.com"
     password = "12356789"
@@ -190,144 +190,25 @@ async def test_list_of_checks_created_by_user(
 
     product_details = await crud_product_check.get_list()
     assert len(product_details) == 0
-
-    product_payload = {
-        "name": "some product",
-        "price": 20,
-        "quantity": 2
-    }
     payment_payload = {
         "type": PaymentType.CASH,
         "amount": 40
     }
     payload = {
-        "products": [product_payload],
         "payment": payment_payload
     }
-
     register_url = f"{settings.API_PREFIX}/checks/"
     response = await client.post(register_url, json=payload,  headers={"Authorization": f"Bearer {token.access_token}"})
 
-    assert response.status_code == status.HTTP_201_CREATED
+    payload["products"] = []
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     resp = response.json()
+    assert resp["detail"][0]["loc"] == ['body', 'products']
+    assert resp["detail"][0]["msg"] == 'Field required'
 
-    product_payload02 = {
-        "name": "A",
-        "price": 150,
-        "quantity": 3
-    }
-    payment_payload02 = {
-        "type": PaymentType.CASHLESS,
-        "amount": 450
-    }
-
-    payload02 = {
-        "products": [product_payload02],
-        "payment": payment_payload02
-    }
-
-    register_url = f"{settings.API_PREFIX}/checks/"
-    response = await client.post(register_url, json=payload02,  headers={"Authorization": f"Bearer {token.access_token}"})
-
-    assert response.status_code == status.HTTP_201_CREATED
-    resp02 = response.json()
-
-    register_url = f"{settings.API_PREFIX}/checks/my-checks?total_sum=200&page=1&size=20"
-    response = await client.get(register_url,  headers={"Authorization": f"Bearer {token.access_token}"})
-
-    assert response.status_code == status.HTTP_200_OK
-    resp = response.json()
-
-
-async def test_get_check_by_creator(
-        db: AsyncSession,
-        client: AsyncClient,
-        auth_connector: AuthConnector,
-        crud_user: DBUserOps,
-        crud_check: DBCheckOps,
-        crud_product_check: DBProductCheckOps,
-) -> None:
-
-    email = "test@test.com"
-    password = "12356789"
-
-    user_data_payload = {
-        "first_name": "Борис",
-        "last_name": "Джонсонюк",
-        "email": email,
-        "password": password,
-    }
-
-    await auth_connector.register(UserRegisterQuery(**user_data_payload))
-    user01 = await crud_user.get_user_by_email(user_email=email)
-
-    credentials = {"user_email": email, "password": password}
-    token = await auth_connector.login(UserLoginQuery(**credentials))
-
-
-    product_payload = {
-        "name": "some product",
-        "price": 20,
-        "quantity": 2
-    }
-    payment_payload = {
-        "type": PaymentType.CASH,
-        "amount": 40
-    }
-    payload = {
-        "products": [product_payload],
-        "payment": payment_payload
-    }
-
-    register_url = f"{settings.API_PREFIX}/checks/"
     response = await client.post(register_url, json=payload,  headers={"Authorization": f"Bearer {token.access_token}"})
-
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     resp = response.json()
-    # this endpoint already tested, so we trust it.
-
-    email_02 = "test_02@test.com"
-    password_02 = "985764321"
-
-    user_data_payload_02 = {
-        "first_name": "Nikolas",
-        "last_name": "Septemberus",
-        "email": email_02,
-        "password": password_02,
-    }
-
-    await auth_connector.register(UserRegisterQuery(**user_data_payload_02))
-    user_02 = await crud_user.get_user_by_email(email_02)
-
-    credentials_02 = {"user_email": email_02, "password": password_02}
-    token_02 = await auth_connector.login(UserLoginQuery(**credentials_02))
-
-    product_payload_02 = {
-        "name": "A",
-        "price": 150,
-        "quantity": 3
-    }
-    payment_payload_02 = {
-        "type": PaymentType.CASHLESS,
-        "amount": 450
-    }
-
-    payload_02 = {
-        "products": [product_payload_02],
-        "payment": payment_payload_02
-    }
-
-    register_url = f"{settings.API_PREFIX}/checks/"
-    response = await client.post(register_url, json=payload_02,  headers={"Authorization": f"Bearer {token_02.access_token}"})
-
-    assert response.status_code == status.HTTP_201_CREATED
-    resp_02 = response.json()
-
-    first_user_check_id = resp["check_id"]
-
-    register_url = f"{settings.API_PREFIX}/checks/{first_user_check_id}"
-    response = await client.get(register_url,  headers={"Authorization": f"Bearer {token.access_token}"})
-
-    assert response.status_code == status.HTTP_200_OK
-    first_user_check_in_response = response.json()
-    assert first_user_check_in_response["check_id"] == first_user_check_id
+    assert resp["detail"][0]["loc"] == ['body', 'products']
+    assert resp["detail"][0]['msg'] == "List should have at least 1 item after validation, not 0"

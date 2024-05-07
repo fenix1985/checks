@@ -20,7 +20,6 @@ BASE_CHECK_GET_QUERY = (
     .join(ProductCheck, ProductCheck.check_id == Check.check_id)
     .join(User, User.user_id == Check.customer_id)
     .options(joinedload(Check.details))
-    # .options(contains_eager(Check.details))
     .options(joinedload(Check.customer))
 
 )

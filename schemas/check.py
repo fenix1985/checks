@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
-from pydantic import BaseModel, ConfigDict
+from annotated_types import Len
+from pydantic import BaseModel, ConfigDict, conlist
 
 from core.enums import PaymentType
 from schemas.product import Product
@@ -16,7 +17,7 @@ class Payment(BaseModel):
 
 class CheckOrderInput(BaseModel):
 
-    products: List[Product]
+    products: Annotated[List[Product], Len(min_length=1)]
     payment: Payment
     model_config = ConfigDict(from_attributes=True)
 
