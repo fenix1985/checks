@@ -12,7 +12,7 @@ from utils import verify_secret, get_password_hash
 
 class AuthConnector:
     """
-    Authorization methods connects api routes with database
+    Authorization methods
     """
 
     def __init__(self, db_connector: DBUserOps, token_handler: TokenHandler):
@@ -24,7 +24,7 @@ class AuthConnector:
         Register a user
 
         :param auth_details: registration query parameter
-        :return: registered user.
+        :return: The registered user as sqlalchemy's model instance.
         """
 
         # create user
@@ -44,7 +44,7 @@ class AuthConnector:
         Login user
 
         :param auth_details: login query parameter
-        :return: login user token.
+        :return: The authorization jwt tokens.
         """
         existing_user = await self.__db_connector.get_user_by_email(auth_details.user_email)
 
@@ -63,7 +63,7 @@ class AuthConnector:
         Generate refresh token
 
         :param refresh_token: refresh token
-        :return: new token.
+        :return: The new tokens to perform authorization.
         """
         payload = self.__token_handler.decode_token(refresh_token, token_type=TokenType.AUTH_REFRESH)
         user_id = int(payload["sub"])
@@ -72,7 +72,12 @@ class AuthConnector:
         return self._generate_tokens(existing_user.user_id)
 
     def _generate_tokens(self, user_id: int) -> TokenBase:
+        """
+        Generate tokens for user with given user_id
 
+        :param user_id: The user unique identity
+        :return: The new tokens to perform authorization.
+        """
         access_token, access_token_expiry_date = self.__token_handler.encode_token(TokenType.AUTH_ACCESS, user_id)
         refresh_token, refresh_token_expiry_date = self.__token_handler.encode_token(TokenType.AUTH_REFRESH, user_id)
 
@@ -85,4 +90,3 @@ class AuthConnector:
                 "refresh_token_expiry_date": refresh_token_expiry_date,
             }
         )
-

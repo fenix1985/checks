@@ -12,8 +12,9 @@ from starlette import status
 from core.config import settings
 
 engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
+
 async_session = sessionmaker(
-    bind=engine,class_=AsyncSession, autoflush=False, expire_on_commit=False, autocommit=False
+    bind=engine, class_=AsyncSession, autoflush=False, expire_on_commit=False, autocommit=False
 )
 
 

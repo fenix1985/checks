@@ -95,7 +95,7 @@ class DBConnectorBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param db_obj: Database model to validate
         """
 
-    async def create(self, *, obj_in: Union[CreateSchemaType, Dict[str, Any]]) -> ModelType:
+    async def create(self, obj_in: Union[CreateSchemaType, Dict[str, Any]]) -> ModelType:
         """
         Create model instance from its blueprint
 

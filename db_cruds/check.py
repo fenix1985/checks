@@ -27,7 +27,7 @@ class DBCheckOps(DBConnectorBase[Check, CheckOrderInput, UpdateCheck]):
         Create model instance from its blueprint
 
         :param check: blueprint check
-        :return: created model instance
+        :return: created model instance of the check
         """
 
         self._db.add(check)
@@ -36,7 +36,7 @@ class DBCheckOps(DBConnectorBase[Check, CheckOrderInput, UpdateCheck]):
 
     async def get_user_checks_with_details(self, customer_id: int, filters: Optional[Dict[Any, Any]]) -> List[CheckOut]:
         """
-        Fetches multiple records from the database of a given model (ModelType).
+        Fetches multiple records from the database checks by user id as customer_id.
 
         :param customer_id:
         :param filters: Dictionary of filters to apply.
@@ -66,13 +66,21 @@ class DBCheckOps(DBConnectorBase[Check, CheckOrderInput, UpdateCheck]):
             )
         return checks_out
 
-
     async def get_with_collected_details(
             self,
             customer_id: Optional[int] = None,
             check_id: Optional[int] = None,
             check_token: Optional[str] = None
     ) -> Union[CheckOut, None]:
+        """
+        The method allow to get a check by unique identifiers like check_token or check_id.
+
+        :param customer_id: The unique identifier of a user who created a check with check_id and check_token
+        :param check_id: The unique identifier for the check
+        :param check_token: The unique token of the check to provide public checks for any unauthorized user
+
+        :returns: The pydantic model instance or None.
+        """
 
         count_query = COUNT_TOTAL_AND_REST_QUERY.where(Check.customer_id == customer_id) if customer_id else COUNT_TOTAL_AND_REST_QUERY
         query = BASE_CHECK_GET_QUERY.where(Check.customer_id == customer_id) if customer_id else BASE_CHECK_GET_QUERY
@@ -107,6 +115,17 @@ class DBCheckOps(DBConnectorBase[Check, CheckOrderInput, UpdateCheck]):
             payment_rest: float,
             check_creator: Optional[str] = None,
     ) -> CheckOut:
+        """
+        The method performs the conversion of the base query results into a CheckOut schema.
+
+        check: An object of the Check class representing the check.
+        total_check_sum: The total sum of the check is counted by products and their prices.
+        payment_rest: The rest after payment.
+        check_creator (optional): The name of the check creator.
+
+        Returns:
+
+        """
         payment_info = Payment.model_validate(check)
         product_info = [Product.model_validate(e) for e in check.details]
         check_out = CheckOut(
