@@ -54,6 +54,7 @@ Then click authorize button and fill in jwt the form with this jwt. After these 
 
 * How to see created check for unauthorized user? 
 You need to create a check via API and copy `url` field from the response. Just send it to any person.
+Example: http://localhost:8082/api/checks/de783fe1f06047a3b452f666035b54f6/show-public
 
 
 ## Backend local development, additional details
