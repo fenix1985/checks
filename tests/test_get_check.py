@@ -181,7 +181,51 @@ async def test_get_check_by_not_authenticated_user(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+async def test_get_check_by_token(
+        db: AsyncSession,
+        client: AsyncClient,
+        auth_connector: AuthConnector,
+        crud_user: DBUserOps,
+        crud_check: DBCheckOps,
+        crud_product_check: DBProductCheckOps,
+):
+    email = "test@test.com"
+    password = "12356789"
 
+    user_data_payload = {
+        "first_name": "Борис",
+        "last_name": "Джонсонюк",
+        "email": email,
+        "password": password,
+    }
 
+    await auth_connector.register(UserRegisterQuery(**user_data_payload))
+
+    credentials = {"user_email": email, "password": password}
+    token = await auth_connector.login(UserLoginQuery(**credentials))
+
+    product_payload = {
+        "name": "some product",
+        "price": 20,
+        "quantity": 2
+    }
+    payment_payload = {
+        "type": PaymentType.CASH,
+        "amount": 40
+    }
+    payload = {
+        "products": [product_payload],
+        "payment": payment_payload
+    }
+
+    create_url = f"{settings.API_PREFIX}/checks/"
+    response = await client.post(create_url, json=payload, headers={"Authorization": f"Bearer {token.access_token}"})
+    resp = response.json()
+
+    check_token = resp["token"]
+    response = await client.get(f"{settings.API_PREFIX}/checks/{check_token}/show-public")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.headers["content-type"] == "text/html; charset=utf-8"
 
 
